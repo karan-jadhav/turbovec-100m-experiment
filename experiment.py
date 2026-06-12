@@ -345,6 +345,46 @@ class Runner:
                 )
                 subprocess.run(command, check=True, env=environment)
 
+    def package_final_artifacts(self, name: str) -> Path | None:
+        log_path = self.logs_dir / f"{name}.log"
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        started = time.perf_counter()
+        with log_path.open("a") as file_log:
+            tee_out = Tee(sys.stdout, file_log)
+            tee_err = Tee(sys.stderr, file_log)
+            with redirect_stdout(tee_out), redirect_stderr(tee_err):
+                self.log(f"START {name}")
+                try:
+                    archive = package_artifacts(self.config)
+                    elapsed = time.perf_counter() - started
+                    self.mark_done(name)
+                    self.update_status(
+                        artifact_status="complete",
+                        artifact_path=str(archive),
+                        artifact_phase_seconds=elapsed,
+                    )
+                    self.log(f"DONE {name} in {format_duration(elapsed)}")
+                    return archive
+                except Exception:
+                    elapsed = time.perf_counter() - started
+                    self.update_status(
+                        artifact_status="failed",
+                        artifact_phase_seconds=elapsed,
+                        artifact_error=traceback.format_exc(),
+                    )
+                    (self.state_dir / "ARTIFACT_FAILED").write_text(
+                        f"{name}\n{utc_now()}\n{traceback.format_exc()}"
+                    )
+                    self.log(f"WARNING {name} failed; benchmark remains complete")
+                    traceback.print_exc()
+                    self.notify(
+                        f"⚠️ TurboVec 100M artifact packaging failed\n"
+                        f"Profile: {self.profile}\n"
+                        f"Results are complete.\n"
+                        f"Check: {log_path}"
+                    )
+                    return None
+
     def execute(self) -> None:
         if (self.state_dir / "FAILED").exists():
             (self.state_dir / "FAILED").unlink()
@@ -432,10 +472,6 @@ class Runner:
                 f"{phase_number:02d}_summarize",
                 lambda: create_summary(self.config),
             )
-            self.run_phase(
-                f"{phase_number + 1:02d}_package",
-                lambda: package_artifacts(self.config),
-            )
 
             (self.state_dir / "SUCCESS").write_text(utc_now())
             self.current_phase = "complete"
@@ -443,12 +479,9 @@ class Runner:
                 status="complete",
                 message="pipeline completed successfully",
             )
+            self.package_final_artifacts(f"{phase_number + 1:02d}_package")
 
             final_table = (self.results_dir / "final-summary.txt").read_text()
-            full_rows = []
-            for line in final_table.splitlines():
-                if str(full_count) in line:
-                    full_rows.append(line.strip())
 
             self.notify(
                 "✅ TurboVec 100M completed\n"
