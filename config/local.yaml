@@ -1,0 +1,37 @@
+profile: local
+
+paths:
+  data_dir: runtime/local/data
+  index_dir: runtime/local/indexes
+  run_dir: runtime/local
+
+dataset:
+  source: synthetic
+  vectors: 5000
+  dimensions: 768
+  queries: 100
+  ground_truth_k: 100
+  seed: 20260612
+  checkpoints:
+    - 1000
+    - 2500
+    - 5000
+
+build:
+  bit_widths:
+    - 4
+    - 2
+  batch_size: 500
+
+benchmark:
+  query_sample_size: 100
+  query_seed: 20260613
+  latency_queries: 50
+  latency_repeats: 2
+  throughput_repeats: 3
+  throughput_threads: 4
+  k: 10
+
+runtime:
+  max_hours: 1
+  telegram: false

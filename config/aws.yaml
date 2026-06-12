@@ -1,0 +1,45 @@
+profile: aws
+
+paths:
+  data_dir: /mnt/tv-data/msmarco
+  index_dir: /mnt/tv-index/indexes
+  run_dir: runtime/aws
+
+dataset:
+  source: msmarco
+  dimensions: 768
+  ground_truth_k: 100
+  checkpoints:
+    - 1000000
+    - 10000000
+    - full
+  urls:
+    vectors.bin: https://msmarco.z22.web.core.windows.net/msmarcowebsearch/vectors/SimANS/passage_vectors/vectors.bin
+    query.bin: https://msmarco.z22.web.core.windows.net/msmarcowebsearch/vectors/SimANS/query_vectors/vectors.bin
+    msmarco-1M-gt100: https://comp21storage.z5.web.core.windows.net/msmarcowebsearch/msmarco-1M-gt100
+    msmarco-10M-gt100: https://comp21storage.z5.web.core.windows.net/msmarcowebsearch/msmarco-10M-gt100
+    msmarco-100M-gt100: https://comp21storage.z5.web.core.windows.net/msmarcowebsearch/msmarco-100M-gt100
+
+build:
+  bit_widths:
+    - 4
+    - 2
+  batch_size: 100000
+
+smoke:
+  enabled: true
+  vectors: 1000000
+  bit_width: 4
+
+benchmark:
+  query_sample_size: 1000
+  query_seed: 20260613
+  latency_queries: 300
+  latency_repeats: 3
+  throughput_repeats: 5
+  throughput_threads: 32
+  k: 10
+
+runtime:
+  max_hours: 20
+  telegram: true
