@@ -46,15 +46,21 @@ def open_ibin(path: Path) -> np.memmap:
     if header.size != 2:
         raise ValueError(f"invalid ibin header: {path}")
     rows, columns = map(int, header)
-    expected = 8 + rows * columns * 4
     actual = path.stat().st_size
-    if actual != expected:
+    expected_i32 = 8 + rows * columns * 4
+    expected_i64 = 8 + rows * columns * 8
+    if actual == expected_i32:
+        dtype = np.int32
+    elif actual == expected_i64:
+        dtype = np.int64
+    else:
         raise ValueError(
-            f"{path}: header expects {expected:,} bytes, file has {actual:,}"
+            f"{path}: header expects {expected_i32:,} or "
+            f"{expected_i64:,} bytes, file has {actual:,}"
         )
     return np.memmap(
         path,
-        dtype=np.int32,
+        dtype=dtype,
         mode="r",
         offset=8,
         shape=(rows, columns),
