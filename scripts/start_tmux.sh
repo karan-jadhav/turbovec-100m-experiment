@@ -16,8 +16,10 @@ if tmux has-session -t "${SESSION}" 2>/dev/null; then
   exit 0
 fi
 
-COMMAND="cd '${ROOT}' && make _aws-run 2>&1 | tee -a '${LOG}'"
-tmux new-session -d -s "${SESSION}" "${COMMAND}"
+printf -v LOG_ARG "%q" "${LOG}"
+COMMAND="set -o pipefail; make _aws-run 2>&1 | tee -a ${LOG_ARG}"
+printf -v COMMAND_ARG "%q" "${COMMAND}"
+tmux new-session -d -s "${SESSION}" -c "${ROOT}" "bash -lc ${COMMAND_ARG}"
 
 echo "Started tmux session: ${SESSION}"
 echo "Status: make aws-status"
