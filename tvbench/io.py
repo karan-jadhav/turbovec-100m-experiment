@@ -48,24 +48,32 @@ def open_ibin(path: Path) -> np.memmap:
     rows, columns = map(int, header)
     actual = path.stat().st_size
     expected_i32 = 8 + rows * columns * 4
-    expected_i64 = 8 + rows * columns * 8
     if actual == expected_i32:
-        dtype = np.int32
-    elif actual == expected_i64:
-        dtype = np.int64
+        return np.memmap(
+            path,
+            dtype=np.int32,
+            mode="r",
+            offset=8,
+            shape=(rows, columns),
+            order="C",
+        )
+
+    expected_ids_and_distances = 8 + rows * columns * 8
+    if actual == expected_ids_and_distances:
+        return np.memmap(
+            path,
+            dtype=np.int32,
+            mode="r",
+            offset=8,
+            shape=(rows, columns),
+            order="C",
+        )
+
     else:
         raise ValueError(
             f"{path}: header expects {expected_i32:,} or "
-            f"{expected_i64:,} bytes, file has {actual:,}"
+            f"{expected_ids_and_distances:,} bytes, file has {actual:,}"
         )
-    return np.memmap(
-        path,
-        dtype=dtype,
-        mode="r",
-        offset=8,
-        shape=(rows, columns),
-        order="C",
-    )
 
 
 def human_bytes(value: int | float) -> str:
